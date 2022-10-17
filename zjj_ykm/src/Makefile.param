@@ -1,0 +1,194 @@
+# Makefile.param
+# lifan 
+# 2015-08-21
+
+
+
+#export PLAT=HI3516CV300
+#export PLAT=MSC313E
+#export PLAT=MSC316DM
+#export PLAT=HI3518EV200
+
+#export PLAT=x86
+#export PLAT=HI3516DV100
+#export PLAT=S3C2440
+
+
+#export PLAT=GK710X
+#export PLAT=HI3516EV200
+
+#export PLAT=HI3516CV500
+#export USE_BODY=1
+#export USE_JINMAO_QR=1
+#export PLAT=FH8626
+#export PLAT=SSC335
+export PLAT=FH8852
+#export PLAT=FH8852V200
+#export PLAT=SV823
+#export PLAT=FH8852V201
+
+
+
+ifeq ($(PLAT),FH8852V201)
+        export CROSS    := arm-fullhanv3-linux-uclibcgnueabi-
+        export OPTIMIZE_OPTION  := -Os
+        CXXFLAGS_EXT := -std=gnu++11 -DCONFIG_TZ_ENV_VAR -mcpu=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations  -DCONFIG_FH_NNA_ENABLE -DFH_APP_OPEN_NN_DETECT -DCONFIG_USE_PROTOBUF_LITE -DCONFIG_USE_PROTOBUF_LITE_META_DATA
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+        CFLAGS_EXT := -DCONFIG_TZ_ENV_VAR -mcpu=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations -DCONFIG_FH_NNA_ENABLE -DFH_APP_OPEN_NN_DETECT -DCONFIG_USE_PROTOBUF_LITE -DCONFIG_USE_PROTOBUF_LITE_META_DATA
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+	CFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	LDFLAGS_EXT := -mcpu=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations 
+	SHARED_LIB_FLAGS := -mcpu=cortex-a7 -mfloat-abi=hard -mfpu=neon-vfpv4 -fno-aggressive-loop-optimizations
+endif
+
+
+ifeq ($(PLAT),FH8852V200)
+        export CROSS    := arm-fullhanv3-linux-uclibcgnueabi-
+        export OPTIMIZE_OPTION  := -Os
+        CXXFLAGS_EXT := -std=gnu++11 -DCONFIG_TZ_ENV_VAR
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+	CFLAGS_EXT := -DCONFIG_TZ_ENV_VAR
+	CFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+endif
+
+
+
+
+ifeq ($(PLAT),FH8852)
+        export CROSS    := arm-fullhanv2-linux-uclibcgnueabi-
+        export OPTIMIZE_OPTION  := -Os
+        CXXFLAGS_EXT := -std=gnu++11
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+#	CXXFLAGS_EXT += -DCONFIG_SUPPORT_4G_MODULE_MONITOR
+#	CFLAGS_EXT   += -DCONFIG_SUPPORT_4G_MODULE_MONITOR
+	CFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CXXFLAGS_EXT += -DCONFIG_USE_PROTOBUF_LITE -DCONFIG_USE_PROTOBUF_LITE_META_DATA
+	CXXFLAGS_EXT += -DCONFIG_PTZ_BIND_IMAGE_MIRROR_FLIP
+
+endif
+
+
+ifeq ($(PLAT),FH8626)
+        export CROSS    := arm-fullhanv3-linux-uclibcgnueabi-
+        export OPTIMIZE_OPTION  := -Os
+        CXXFLAGS_EXT := -std=c++11
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+endif
+
+
+ifeq ($(PLAT),SV823)
+        export CROSS    := arm-linux-gnueabihf-7.5.0-
+	export OPTIMIZE_OPTION  := -O2
+	CXXFLAGS_EXT := -std=c++11
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_OPENSSL_CPP_WRAPPER -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+	CXXFLAGS_EXT += -Wno-psabi
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE 
+	CFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+#	CXXFLAGS_EXT += -DCONFIG_JSON_MSG_DEBUG
+#	CFLAGS_EXT   := -Wextra
+endif
+
+
+ifeq ($(PLAT),SSC335)
+        export CROSS    := arm-buildroot-linux-uclibcgnueabihf-
+	export OPTIMIZE_OPTION  := -O2
+	CXXFLAGS_EXT := -std=c++11
+endif
+
+
+ifeq ($(PLAT),HI3516CV500)
+        export CROSS    := arm-himix200-linux-
+	export OPTIMIZE_OPTION  := -O2
+	CXXFLAGS_EXT := -DCONFIG_PLAYBACK_BIG_LOCK_ENABLE
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_JSONCPP_SERIALIZE
+	CXXFLAGS_EXT += -DCONFIG_SUPPORT_EXT_PROTOCOL
+	CFLAGS_EXT := -DCONFIG_PLAYBACK_BIG_LOCK_ENABLE
+endif
+
+
+ifeq ($(PLAT),HI3516EV200)
+        export CROSS    := arm-himix100-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+ifeq ($(PLAT),HI3518EV300)
+        export CROSS    := arm-himix100-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+ifeq ($(PLAT),HI3516CV300)
+        export CROSS    := arm-hisiv500-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+
+ifeq ($(PLAT),MSC313E)
+        export CROSS    := arm-linux-gnueabihf-
+	export OPTIMIZE_OPTION  := -Os
+	CXXFLAGS_EXT := -std=c++11
+endif
+
+ifeq ($(PLAT),MSC316DM)
+        export CROSS    := arm-linux-gnueabihf-
+	export OPTIMIZE_OPTION  := -Os
+	CXXFLAGS_EXT := -std=c++11
+endif
+
+
+ifeq ($(PLAT),x86)
+	export CROSS	:= 
+	export OPTIMIZE_OPTION  := -O2
+endif
+
+ifeq ($(PLAT),HI3518EV200)
+	export CROSS	:= arm-hisiv300-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+ifeq ($(PLAT),HI3516DV100)
+	export CROSS	:= arm-hisiv300-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+
+ifeq ($(PLAT),HI3518EV100)
+	export CROSS	:= arm-hisiv100nptl-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif
+
+
+
+ifeq ($(PLAT),S3C2440)
+	export CROSS    := arm-linux-
+	export OPTIMIZE_OPTION  := -Os
+endif 
+
+
+ifeq ($(PLAT),GK710X)
+	export CROSS    := arm-goke-linux-uclibcgnueabi-
+	export OPTIMIZE_OPTION  := -Os
+endif 
+
+
+#export CROSS	:= arm-hisiv300-linux-
+
+export CC		:= $(CROSS)gcc
+export CXX		:= $(CROSS)g++
+export AR		:= $(CROSS)ar
+export STRIP		:= $(CROSS)strip
+export AR		:= $(CROSS)ar
+export JOBS		:= 4 
+
+
+INSTALL_DIR		= $(PWD)/
+
+
+
+CXXFLAGS_EXT		+= -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS
+CFLAGS_EXT       	+= -D__STDC_CONSTANT_MACROS -D__STDC_FORMAT_MACROS
+

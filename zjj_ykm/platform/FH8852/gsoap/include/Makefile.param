@@ -1,0 +1,82 @@
+# Makefile.param
+# lifan 
+# 2015-08-21
+
+#export PLAT=HI3516CV500
+#export PLAT=MSC313E
+#export PLAT=HI3518EV200
+#export PLAT=HI3516CV300
+#export PLAT=x86
+#export PLAT=HI3516DV100
+#export PLAT=S3C2440
+
+
+#export PLAT=GK710X
+
+
+
+export PLAT=FH8852
+
+
+ifeq ($(PLAT),FH8852)
+        export CROSS    := arm-fullhanv2-linux-uclibcgnueabi-
+endif
+
+
+ifeq ($(PLAT),HI3516CV500)
+        export CROSS    := arm-himix200-linux-
+endif
+
+
+ifeq ($(PLAT),MSC313E)
+        export CROSS    := arm-linux-gnueabihf-
+endif
+
+ifeq ($(PLAT),HI3516CV300)
+        export CROSS    := arm-hisiv500-linux-
+endif
+
+ifeq ($(PLAT),x86)
+	export CROSS	:= 
+endif
+
+ifeq ($(PLAT),HI3518EV200)
+	export CROSS	:= arm-hisiv300-linux-
+endif
+
+ifeq ($(PLAT),HI3516DV100)
+	export CROSS	:= arm-hisiv300-linux-
+endif
+
+
+ifeq ($(PLAT),HI3518EV100)
+	export CROSS	:= arm-hisiv100nptl-linux-
+endif
+
+
+
+ifeq ($(PLAT),S3C2440)
+	export CROSS    := arm-linux-
+endif 
+
+
+ifeq ($(PLAT),GK710X)
+	export CROSS    := arm-goke-linux-uclibcgnueabi-
+endif 
+
+
+#export CROSS	:= arm-hisiv300-linux-
+
+export CC		:= $(CROSS)gcc
+export CXX		:= $(CROSS)g++
+export AR		:= $(CROSS)ar
+export STRIP		:= $(CROSS)strip
+export AR		:= $(CROSS)ar
+
+
+
+
+INSTALL_DIR		= $(PWD)/
+
+
+

@@ -1,0 +1,473 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <errno.h>
+#include <signal.h>
+#include "hi_common.h"
+#include "hi_comm_sys.h"
+#include "hi_comm_vb.h"
+#include "hi_comm_ai.h"
+#include "hi_comm_ao.h"
+#include "hi_comm_aio.h"
+#include "hi_defines.h"
+
+#include "acodec.h"
+#include "mpi_sys.h"
+#include "mpi_vb.h"
+#include "mpi_ai.h"
+#include "mpi_ao.h"
+#include "audioRecorder.h"
+
+
+
+
+typedef long long			Int64;
+typedef int				Int32;
+typedef short				Int16;
+typedef char				Int8;
+typedef unsigned long long	UInt64;
+typedef unsigned long		UInt32;
+typedef unsigned short		UInt16;
+typedef unsigned char		UInt8;
+typedef unsigned long		u32;
+
+#define ACODEC_FILE     "/dev/acodec"
+
+typedef struct _cmsAaioInstStr
+{
+    pthread_t stPid;
+	Int32	aiothread_stop;
+	AIO_ATTR_S stAttr;
+	Int32	UsrInst;
+	Int32	(*rFun)(void *_writer, const void *_data, unsigned long _sampleCout);
+	Int32	CapEn;
+}AioInst_t, *pAioInst_t;
+
+Int32 gAaioInst = 0;
+
+HI_S32 _SYS_Init(VB_CONF_S *pstVbConf)
+{
+    MPP_SYS_CONF_S stSysConf = {0};
+    HI_S32 s32Ret = HI_FAILURE;
+
+    HI_MPI_SYS_Exit();
+    HI_MPI_VB_Exit();
+
+    if (NULL == pstVbConf)
+    {
+        printf("input parameter is null, it is invaild!\n");
+        return HI_FAILURE;
+    }
+
+    s32Ret = HI_MPI_VB_SetConf(pstVbConf);
+    if (HI_SUCCESS != s32Ret)
+    {
+        printf("HI_MPI_VB_SetConf failed!\n");
+        return HI_FAILURE;
+    }
+
+    s32Ret = HI_MPI_VB_Init();
+    if (HI_SUCCESS != s32Ret)
+    {
+        printf("HI_MPI_VB_Init failed!\n");
+        return HI_FAILURE;
+    }
+
+    stSysConf.u32AlignWidth = 64;
+    s32Ret = HI_MPI_SYS_SetConf(&stSysConf);
+    if (HI_SUCCESS != s32Ret)
+    {
+        printf("HI_MPI_SYS_SetConf failed\n");
+        return HI_FAILURE;
+    }
+
+    s32Ret = HI_MPI_SYS_Init();
+    if (HI_SUCCESS != s32Ret)
+    {
+        printf("HI_MPI_SYS_Init failed!\n");
+        return HI_FAILURE;
+    }
+
+    return HI_SUCCESS;
+}
+
+/******************************************************************************
+* function : Acodec config [ s32Samplerate(0:8k, 1:16k ) ]
+******************************************************************************/
+static HI_S32 _Acodec_CfgAudio(AUDIO_SAMPLE_RATE_E enSample, HI_BOOL bMicIn)
+{
+    HI_S32 fdAcodec = -1;
+    unsigned int i2s_fs_sel = 0;
+    unsigned int mixer_mic_ctrl = 0;
+    unsigned int gain_mic = 0;
+
+    fdAcodec = open(ACODEC_FILE,O_RDWR);
+    if (fdAcodec < 0)
+    {
+        printf("%s: can't open acodec,%s\n", __FUNCTION__, ACODEC_FILE);
+        return HI_FAILURE;     
+    }
+    
+    if(ioctl(fdAcodec, ACODEC_SOFT_RESET_CTRL))
+    {
+    	printf("Reset audio codec error\n");
+    	close(fdAcodec);
+    	return HI_FAILURE;
+    }
+
+    if ((AUDIO_SAMPLE_RATE_8000 == enSample)
+        || (AUDIO_SAMPLE_RATE_11025 == enSample)
+        || (AUDIO_SAMPLE_RATE_12000 == enSample))
+    {
+        i2s_fs_sel = 0x18;
+    }
+    else if ((AUDIO_SAMPLE_RATE_16000 == enSample)
+        || (AUDIO_SAMPLE_RATE_22050 == enSample)
+        || (AUDIO_SAMPLE_RATE_24000 == enSample))
+    {
+        i2s_fs_sel = 0x19;
+    }
+    else if ((AUDIO_SAMPLE_RATE_32000 == enSample)
+        || (AUDIO_SAMPLE_RATE_44100 == enSample)
+        || (AUDIO_SAMPLE_RATE_48000 == enSample))
+    {
+        i2s_fs_sel = 0x1a;
+    }
+    else 
+    {
+        printf("%s: not support enSample:%d\n", __FUNCTION__, enSample);
+        close(fdAcodec);
+        return HI_FAILURE;
+    }
+    
+    if (ioctl(fdAcodec, ACODEC_SET_I2S1_FS, &i2s_fs_sel))
+    {
+        printf("%s: set acodec sample rate failed\n", __FUNCTION__);
+        close(fdAcodec);
+        return HI_FAILURE;
+    }
+
+    if (HI_TRUE == bMicIn)
+    {
+  		/*do not select micin */  
+#if 0
+        mixer_mic_ctrl = 1;
+        if (ioctl(fdAcodec, ACODEC_SET_MIXER_MIC, &mixer_mic_ctrl))
+        {
+            printf("%s: set acodec micin failed\n", __FUNCTION__);
+            close(fdAcodec);
+            return HI_FAILURE;
+        }
+#endif		
+        /* set volume plus (0~0x1f,default 0x0c) */
+        gain_mic = 0x18;
+        if (ioctl(fdAcodec, ACODEC_SET_GAIN_MICL, &gain_mic))
+        {
+            printf("%s: set acodec micin volume failed\n", __FUNCTION__);
+            close(fdAcodec);
+            return HI_FAILURE;
+        }
+
+        if (ioctl(fdAcodec, ACODEC_SET_GAIN_MICR, &gain_mic))
+        {
+            printf("%s: set acodec micin volume failed\n", __FUNCTION__);
+            close(fdAcodec);
+            return HI_FAILURE;
+        }
+
+    }
+    close(fdAcodec);    
+
+    return HI_SUCCESS;
+}
+
+HI_S32 _AUDIO_CfgAcodec(AIO_ATTR_S *pstAioAttr, HI_BOOL bMacIn)
+{
+    HI_S32 s32Ret = HI_FAILURE;
+
+    s32Ret = _Acodec_CfgAudio(pstAioAttr->enSamplerate, bMacIn);
+    return s32Ret;
+}
+
+//int recorderShortWrite(void *_writer, const void *_data, unsigned long _sampleCout) 
+//{
+//printf("_writer = 0x%x, _data = 0x%x, _sampleSize = %d\n",_writer, _data,_sampleCout);
+//	return 0;
+//}
+
+static void *_AudioProc(HI_VOID *piparam)
+{
+	pAioInst_t tpInst = (pAioInst_t)piparam;
+	HI_S32 s32ret;
+	struct timeval TimeoutVal; 
+	fd_set read_fds;
+	AUDIO_FRAME_S stFrame;
+	int tAiFd, i, s32Ret, tcnt1=0;
+	AI_CHN_PARAM_S stAiChnPara;
+
+printf("_AudioProc running... 0x%x\n",tpInst);
+
+	tAiFd = HI_MPI_AI_GetFd(0, 0);
+	s32Ret = HI_MPI_AI_GetChnParam(0,0, &stAiChnPara);
+	if (HI_SUCCESS != s32Ret)
+	{
+		printf("%s: Get ai chn param failed\n", __FUNCTION__);
+		return NULL;
+	}
+	stAiChnPara.u32UsrFrmDepth = 4;
+	
+	s32Ret = HI_MPI_AI_SetChnParam(0,0, &stAiChnPara);
+	if (HI_SUCCESS != s32Ret)
+	{
+		printf("%s: set ai chn param failed\n", __FUNCTION__);
+		return NULL;
+	}
+
+	tpInst->aiothread_stop = 0;
+	while(tpInst->aiothread_stop == 0)
+	{
+		TimeoutVal.tv_sec = 1;
+		TimeoutVal.tv_usec = 0; // 
+		
+		FD_ZERO(&read_fds);
+		FD_SET(tAiFd,&read_fds);
+		
+		s32Ret = select(tAiFd+1, &read_fds, NULL, NULL, &TimeoutVal);
+		if (s32Ret < 0) 
+		{
+			printf("get frame error errno=%d\n",errno);
+		}
+		else if (0 == s32Ret) 
+		{
+				printf("%s: get ai frame select time out\n", __FUNCTION__);
+		}		 
+		else
+		if (FD_ISSET(tAiFd, &read_fds))
+		{
+			/* get frame from ai chn */
+			s32Ret = HI_MPI_AI_GetFrame(0, 0, &stFrame, NULL, HI_FALSE);
+			if (HI_SUCCESS != s32Ret )
+			{
+				printf("%s: HI_MPI_AI_GetFrame(%d, %d), failed with %#x!\n",\
+					   __FUNCTION__, 0, 0, s32Ret);
+				continue; 
+			}
+			if (tpInst->rFun && tpInst->CapEn)
+				tpInst->rFun(tpInst->UsrInst, stFrame.pVirAddr[0], stFrame.u32Len>>tpInst->stAttr.enBitwidth);
+			/* finally you must release the stream */
+			HI_MPI_AI_ReleaseFrame(0, 0, &stFrame, NULL);
+		}
+	}
+//printf("_cmsAudioProc Exit!!!\n");
+	return NULL;
+}
+
+Int32 initRecorder(Int32 piSampleRate, Int32 piSoundmode, Int32 piBitwidth, Int32 piPtNumPerFrm, void **poRecInst)
+{
+	pAioInst_t tpInst = NULL;
+	AIO_ATTR_S stAttr, stAiAttr, stAoAttr;
+	HI_S32 s32ret;
+	int tAidev, i;
+	Int32 tAiQInst=0, tBInst;
+    VB_CONF_S stVbConf;
+	tpInst = (pAioInst_t)malloc(sizeof(AioInst_t));
+	if (tpInst == NULL)
+		return -1;
+	memset(tpInst,0,sizeof(AioInst_t));
+
+	memset(&stVbConf, 0, sizeof(VB_CONF_S));
+	if (_SYS_Init(&stVbConf) != HI_SUCCESS)
+		return -1;
+
+	/*---------------------------	AI¡¡----------------------------------*/
+	stAttr.enWorkmode = AIO_MODE_I2S_MASTER;
+	stAttr.enBitwidth = (piBitwidth == 32) ? AUDIO_BIT_WIDTH_32:((piBitwidth == 16)?AUDIO_BIT_WIDTH_16:AUDIO_BIT_WIDTH_8);
+	stAttr.enSamplerate = piSampleRate;//AUDIO_SAMPLE_RATE_44100;
+	stAttr.u32PtNumPerFrm = piPtNumPerFrm;//640;
+
+	stAttr.enSoundmode = (piSoundmode == 2) ? AUDIO_SOUND_MODE_STEREO : AUDIO_SOUND_MODE_MONO;   
+	stAttr.u32EXFlag = 1;
+	stAttr.u32FrmNum = 30;
+
+	stAttr.u32ChnCnt = 2;
+	stAttr.u32ClkSel = 1;
+
+	memcpy(&stAiAttr, &stAttr, sizeof(AIO_ATTR_S));
+	if (_AUDIO_CfgAcodec(&stAttr, HI_TRUE)!=0)
+	{
+		printf("SAMPLE_AI_CfgAudio error!\n");
+	}
+	/* set ai public attr*/
+	s32ret = HI_MPI_AI_SetPubAttr(0, &stAiAttr);
+	
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("set ai attr err:0x%x\n", s32ret);
+	}
+	/* enable ai device*/
+	s32ret = HI_MPI_AI_Enable(0);
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("enable ai dev err:0x%x\n",s32ret);
+	}
+	/* enable ai chnnel*/
+	s32ret = HI_MPI_AI_EnableChn(0, 0);
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("enable ai dev_0 chn_0 err:0x%x\n", s32ret);
+	}
+	
+	/*---------------------------	AO¡¡----------------------------------*/
+	stAoAttr.enSamplerate = stAttr.enSamplerate;
+	stAoAttr.u32PtNumPerFrm = stAttr.u32PtNumPerFrm;
+	stAoAttr.enWorkmode = AIO_MODE_I2S_MASTER;	
+	stAoAttr.enSoundmode = stAttr.enSoundmode;
+	stAoAttr.u32EXFlag =  1;
+	stAoAttr.u32FrmNum = stAttr.u32FrmNum; 
+	stAoAttr.enBitwidth =  stAttr.enBitwidth;
+	
+	stAoAttr.u32ChnCnt = 2;
+	stAoAttr.u32ClkSel = 1;
+ 	
+	/* set ao public attr*/
+	s32ret = HI_MPI_AO_SetPubAttr(0, &stAoAttr);
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("set ao attr err:0x%x\n", s32ret);
+	}
+	/* enable ao device*/
+	s32ret = HI_MPI_AO_Enable(0);
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("enable ao dev err:0x%x\n", s32ret);
+	}
+	/* enable ao chnnel*/
+	s32ret = HI_MPI_AO_EnableChn(0, 0);
+	if(HI_SUCCESS != s32ret)
+	{
+		printf("enable ao chn 0 err:0x%x\n", s32ret);
+	}
+	memcpy(&tpInst->stAttr, &stAoAttr, sizeof(AIO_ATTR_S));
+	*poRecInst = (Int32)tpInst;
+
+	return 0;
+}
+
+Int32 startRecord(void * piRecInst, void * piwriter, Int32 (*piCapFun)(void *_writer, const void *_data, unsigned long _sampleCout))
+{
+	pAioInst_t tpInst = (pAioInst_t)piRecInst;
+	HI_S32 s32ret;
+
+	if (tpInst == NULL)
+		return -1;
+
+	tpInst->UsrInst = piwriter;
+	tpInst->rFun = piCapFun;
+	tpInst->CapEn = 1;
+	tpInst->aiothread_stop = 1;
+	s32ret = pthread_create(&tpInst->stPid, 0, _AudioProc, (HI_VOID *)tpInst);
+	while (tpInst->aiothread_stop)
+		usleep(10000);
+	
+	return 0;
+}
+
+Int32 stopRecord(void * piRecInst)
+{
+	pAioInst_t tpInst = (pAioInst_t)piRecInst;
+
+	if (tpInst == NULL)
+		return -1;
+
+	tpInst->CapEn = 0;
+	
+	return 0;
+}
+
+Int32 releaseRecorder(void * piRecInst)
+{
+	pAioInst_t tpInst = (pAioInst_t)piRecInst;
+	Int32 s32ret;
+
+	if (tpInst == NULL)
+		return -1;
+
+	if (tpInst->stPid != 0)
+	{
+		tpInst->aiothread_stop = 1;
+		pthread_join(tpInst->stPid,0);
+	}
+	
+	HI_MPI_AI_DisableChn(0, 0);
+	
+	s32ret = HI_MPI_AI_Disable(0);
+	if (s32ret)
+	{
+		printf("HI_MPI_AI_Disable 0 err:0x%x\n", (unsigned int)s32ret);
+	}
+	s32ret = HI_MPI_AO_DisableChn(0, 0);
+	if (s32ret)
+	{
+		printf("HI_MPI_AO_DisableChn err:0x%x\n",(unsigned int)s32ret);
+	}
+
+	s32ret =HI_MPI_AO_Disable(0);
+	if (s32ret)
+	{
+		printf("HI_MPI_AO_Disable err:0x%x\n", (unsigned int)s32ret);
+	}
+	HI_MPI_AO_ClrPubAttr(0);
+
+	free (tpInst);
+
+	return 0;
+}
+
+
+/******************************************************************************
+* function : to process abnormal case
+******************************************************************************/
+void _AUDIO_HandleSig(HI_S32 signo)
+{
+    if (SIGINT == signo || SIGTSTP == signo)
+    {
+        if (gAaioInst)
+    	{
+    		if (gAaioInst)
+			{
+				releaseRecorder(gAaioInst);
+			}
+		}
+		printf("\033[0;31mprogram exit abnormally!\033[0;39m\n");
+    }
+
+    exit(0);
+}
+
+/*
+HI_S32 main(int argc, char *argv[])
+{
+	
+    signal(SIGINT, _AUDIO_HandleSig);
+    signal(SIGTERM, _AUDIO_HandleSig);
+	
+	initRecorder(44100, 1, 16, 512, &gAaioInst);
+	startRecord(gAaioInst, 0xaaa, recorderShortWrite);
+	getchar();
+	stopRecord(gAaioInst);
+	releaseRecorder(gAaioInst);
+	
+}
+*/
+
+
+
+
+
+
