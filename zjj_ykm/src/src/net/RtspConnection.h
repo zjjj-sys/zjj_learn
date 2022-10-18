@@ -67,6 +67,8 @@ private:
     int mSessionId;
     bool mIsRtpOverTcp;
     uint8_t mRtpChannel;
+    bool AIandVI;
+
 };
 
 #endif //_RTSP_CONNECTION_

@@ -178,8 +178,6 @@ void H265RtpSink::sendhandleFrame(AVFrame *frame)
     }
     
     Pretimestamp = frame->m_ftimestamp;
-    //LOG_INFO("mTimestamp : %u\n",mTimestamp);
-    //rtpHeader->timestamp = htonl(frame->m_ftimestamp);
     
     if (frame->mFrameSize <= RTP_MAX_PKT_SIZE) //单一封包模式
     {
@@ -234,6 +232,7 @@ void H265RtpSink::sendhandleFrame(AVFrame *frame)
     //mTimestamp +=3600;
 }
 
+#if 0
 //对frame 进行 rtp分包并发送
 void H265RtpSink::handleFrame(AVFrame *frame)
 {
@@ -241,11 +240,12 @@ void H265RtpSink::handleFrame(AVFrame *frame)
     int pos = 0;
     uint8_t *nextStartCode;
     AVFrame temp_frame;
-    
+    //int Ret = frame->mFrameSize ;
     if (frame->mFrameSize == 0)
     {
         usleep(5 * 1000);
         return;
+        //return 0;
     }
     rSize = frame->mFrameSize;
 
@@ -293,4 +293,70 @@ void H265RtpSink::handleFrame(AVFrame *frame)
     {
         sendhandleFrame(frame);
     }
+    //return Ret;
 }
+#endif
+
+int H265RtpSink::handleFrame(AVFrame *frame)
+{
+    int rSize, frameSize;
+    int pos = 0;
+    uint8_t *nextStartCode;
+    AVFrame temp_frame;
+    
+    int Ret = frame->mFrameSize ;
+    if (frame->mFrameSize == 0)
+    {
+        //usleep(5 * 1000);
+        
+        return 0;
+    }
+    rSize = frame->mFrameSize;
+
+    temp_frame.m_ftimestamp = frame->m_ftimestamp;
+    //LOG_INFO("temp_frame: %u\n",temp_frame.m_ftimestamp);
+    if (frame->key_frame == 1)
+    {
+        if (!startCode3(frame->mFrame) && !startCode4(frame->mFrame))
+        {
+            LOG_INFO("no start code\n");
+            return 0;
+        }
+        for (int j = 0; j < 4; j++)
+        {
+            nextStartCode = findNextStartCode(frame->mBuffer + 3 + pos, rSize - 3 - pos);
+            if (nextStartCode == NULL)
+            {
+                frameSize = rSize-pos-4;
+                temp_frame.mFrameSize = frameSize;
+                memcpy(temp_frame.mBuffer, frame->mBuffer + pos + 4, frameSize);
+                temp_frame.mFrame = temp_frame.mBuffer;
+                
+                sendhandleFrame(&temp_frame);    
+                
+                break;
+            }
+            else
+            {
+                frameSize = (nextStartCode - frame->mBuffer); //计算出两个起始码之间的数据量
+                frameSize -=pos;
+                
+                memcpy(temp_frame.mBuffer, frame->mBuffer + pos + 4, frameSize - 4);
+                temp_frame.mFrameSize = frameSize - 4;
+                temp_frame.mFrame = temp_frame.mBuffer;
+                
+                sendhandleFrame(&temp_frame);
+
+                pos += frameSize;
+                nextStartCode = NULL;
+                
+            }
+        }
+    }
+    else
+    {
+        sendhandleFrame(frame);
+    }
+    return Ret;
+}
+

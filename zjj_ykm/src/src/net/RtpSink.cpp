@@ -73,9 +73,23 @@ void RtpSink::timeoutCallback(void* arg)
         return;
     }
 
-    rtpSink->handleFrame(frame);   //通过定时器事件来定时发送数据
+    rtpSink->handleFrame(frame);   
     rtpSink->mMediaSource->putFrame(frame);
     
+}
+//test sendframe
+int RtpSink::SendFramedCallback(void* arg)
+{
+    int Ret = 0 ;
+    RtpSink* rtpsink = (RtpSink*)arg;
+    AVFrame* frame = rtpsink->mMediaSource->getFrame();
+    if(!frame)
+    {
+        return 0;
+    }
+    Ret = rtpsink->handleFrame(frame);
+    rtpsink->mMediaSource->putFrame(frame);
+    return Ret;
 }
 
 void RtpSink::start(int ms)

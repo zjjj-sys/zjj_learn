@@ -26,7 +26,8 @@ RtspConnection::RtspConnection(RtspServer *rtspServer, int sockfd) : TcpConnecti
                                                                      mMethod(MOME),
                                                                      mTrackId(MediaSession::TrackIdNone),
                                                                      mSessionId(rand()),
-                                                                     mIsRtpOverTcp(false)
+                                                                     mIsRtpOverTcp(false),
+                                                                     AIandVI(false)
 {
     for (int i = 0; i < MEDIA_MAX_TRACK_NUM; ++i)
     {
@@ -270,7 +271,7 @@ bool RtspConnection::parseTransport(std::string &message)
 
     return false;
 }
-
+#if 0
 bool RtspConnection::parseMediaTrack()
 {
     std::size_t pos = mUrl.find("track0");
@@ -280,7 +281,18 @@ bool RtspConnection::parseMediaTrack()
         return true;
     }
 //存在bug 一个连接只能保存一个trackID 导致无法同时发送ai vi数据
+    
+
     pos = mUrl.find("track1");
+    /* if(pos != std::string::npos)
+    {
+        if(mTrackId = MediaSession::TrackId0)
+        {
+            mTrackId = MediaSession::TrackId2;
+            return true;
+        }
+        
+    }  */
     if (pos != std::string::npos)
     {
         mTrackId = MediaSession::TrackId1;
@@ -289,6 +301,34 @@ bool RtspConnection::parseMediaTrack()
 
     return false;
 }
+#endif
+
+bool RtspConnection::parseMediaTrack()
+{
+    std::size_t pos = mUrl.find("track0");
+    if (pos != std::string::npos)
+    {
+        mTrackId = MediaSession::TrackId0;
+        return true;
+    }
+    
+    pos = mUrl.find("track1");
+    if(pos != std::string::npos)
+    {
+        if(mTrackId == MediaSession::TrackId0)
+        {
+            //mTrackId = MediaSession::TrackId2;
+            //return true;
+            AIandVI = true;
+        }
+        mTrackId = MediaSession::TrackId1;
+        return true;
+        
+    } 
+    return false;
+}
+
+
 
 bool RtspConnection::parseSessionId(std::string &message)
 {
@@ -521,10 +561,48 @@ void RtspConnection::handleRtpOverTcp()
     
 }
 
-
+#if 0
 void RtspConnection::handleWriteBytes()
 {   
     //LOG_INFO("trackId : %d\n",mTrackId);
+    
     MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(mTrackId);
     RtpSink::timeoutCallback(track->mRtpSink);
+
+    //通过检测返回值来确定是否有数据发送了 都没有数据发送就停10ms
+    /* if(mTrackId == track3)
+    {
+        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId0);
+        RtpSink::timeoutCallback(track->mRtpSink);
+        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId1);
+        RtpSink::timeoutCallback(track->mRtpSink);
+    } */
+}
+#endif 
+
+void RtspConnection::handleWriteBytes()
+{   
+    int AIRet = 0;
+    int VIRet = 0;
+    
+    if(AIandVI == true)
+    {
+        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId0);
+        VIRet = RtpSink::SendFramedCallback(track->mRtpSink);
+        track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId1);
+        AIRet = RtpSink::SendFramedCallback(track->mRtpSink);
+        if(VIRet == 0 && AIRet == 0)
+        {
+            usleep(20*1000);
+        }
+    }
+    else
+    {
+        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(mTrackId);
+        AIRet = RtpSink::SendFramedCallback(track->mRtpSink);
+        if(AIRet == 0)
+        {
+            usleep(5*1000);
+        }
+    }
 }

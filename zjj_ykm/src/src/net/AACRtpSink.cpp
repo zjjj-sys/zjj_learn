@@ -72,7 +72,7 @@ std::string AACRtpSink::getAttribute()
 
     return std::string(buf);
 }
-
+#if 0
 void AACRtpSink::handleFrame(AVFrame* frame)
 {
     RtpHeader* rtpHeader = mRtpPacket.mRtpHeadr;
@@ -94,4 +94,28 @@ void AACRtpSink::handleFrame(AVFrame* frame)
     /* (1000 / mFps) 表示一帧多少毫秒 */
     mTimestamp += mSampleRate * (1000 / mFps) / 1000;
 }
+#endif 
 
+
+int AACRtpSink::handleFrame(AVFrame* frame)
+{
+    RtpHeader* rtpHeader = mRtpPacket.mRtpHeadr;
+    int frameSize = frame->mFrameSize-7; //去掉aac头部
+
+    rtpHeader->payload[0] = 0x00;
+    rtpHeader->payload[1] = 0x10;
+    rtpHeader->payload[2] = (frameSize & 0x1FE0) >> 5; //高8位
+    rtpHeader->payload[3] = (frameSize & 0x1F) << 3; //低5位
+
+    /* 去掉aac的头部 */
+    memcpy(rtpHeader->payload+4, frame->mFrame+7, frameSize);
+    mRtpPacket.mSize = frameSize + 4;
+
+    sendRtpPacket(&mRtpPacket);
+
+    mSeq++;
+
+    /* (1000 / mFps) 表示一帧多少毫秒 */
+    mTimestamp += mSampleRate * (1000 / mFps) / 1000;
+    return frameSize;
+}

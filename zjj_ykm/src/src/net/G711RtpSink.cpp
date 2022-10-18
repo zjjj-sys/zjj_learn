@@ -22,7 +22,7 @@ G711RtpSink::G711RtpSink(UsageEnvironment* env, MediaSource* mediaSource, int pa
     mFps(mediaSource->getFps())
 {
     mMarker = 1;
-    start(1000/mFps);
+    //start(1000/mFps);
 }
 
 G711RtpSink::~G711RtpSink()
@@ -46,7 +46,7 @@ std::string G711RtpSink::getAttribute()
     sprintf(buf, "a=rtpmap:8 PCMA/%u/%u\r\n", mSampleRate, mChannels);
     return std::string(buf);
 }
-
+#if 0
 void G711RtpSink::handleFrame(AVFrame* frame)
 {
     RtpHeader* rtpHeader = mRtpPacket.mRtpHeadr;
@@ -68,6 +68,33 @@ void G711RtpSink::handleFrame(AVFrame* frame)
     mSeq++;
     
     mTimestamp += mSampleRate * (1000 / mFps) / 1000;
+    
+}
+#endif
+
+int G711RtpSink::handleFrame(AVFrame* frame)
+{
+    RtpHeader* rtpHeader = mRtpPacket.mRtpHeadr;
+    int frameSize = frame->mFrameSize; 
+    
+    if(frameSize == 0)
+    {
+        //usleep(5000);
+        return 0;
+    }
+    //rtpHeader->timestamp = htonl(frame->m_ftimestamp);
+    //mTimestamp = frame->m_ftimestamp;
+    //LOG_INFO("G711_Timestamp: %u\n",mTimestamp);
+    memcpy(rtpHeader->payload, frame->mFrame, frameSize);
+    mRtpPacket.mSize = frameSize ;
+
+    sendRtpPacket(&mRtpPacket);
+    
+    mSeq++;
+    
+    mTimestamp += mSampleRate * (1000 / mFps) / 1000;
+    
+    return frameSize;
     
 }
 
