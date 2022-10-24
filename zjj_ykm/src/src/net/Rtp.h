@@ -46,6 +46,7 @@ public:
         mBuffer(_mBuffer+4),
         mRtpHeadr((RtpHeader*)mBuffer),
         mSize(0)
+        //framebuf(new uint8_t[512*1024])
     {
         
     }
@@ -53,12 +54,14 @@ public:
     ~RtpPacket()
     {
         delete _mBuffer;
+        //delete framebuf;
     }
 
-    uint8_t* _mBuffer;     //没有加TCP_OVER的四个头字节时的 RTP包数据
-    uint8_t* mBuffer;           //加入tcp四个字节后的rtp数据
+    uint8_t* _mBuffer;     //加TCP_OVER的四个头字节时的 RTP包数据
+    uint8_t* mBuffer;           //没有加入tcp四个字节的rtp数据
     RtpHeader* const mRtpHeadr;
     int mSize;
+    //uint8_t* framebuf;
 };
 
 #endif //_RTP_H_

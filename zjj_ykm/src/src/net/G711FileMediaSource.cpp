@@ -21,7 +21,7 @@ G711FileMediaSource::G711FileMediaSource(UsageEnvironment *env, CShmBuf *VideoCo
 {
     
     tagframe = (FRAME *)malloc(sizeof(FRAME) + FRAME_MAX_SIZE);
-    setFps(17);
+    //setFps(17);
     memset(tagframe, 0, sizeof(FRAME) + FRAME_MAX_SIZE);
     for (int i = 0; i < DEFAULT_FRAME_NUM; ++i)
     {
@@ -60,6 +60,7 @@ void G711FileMediaSource::readFrame()
         frame->mFrameSize = 0;
         mAVFrameInputQueue.pop();
         mAVFrameOutputQueue.push(frame);
+        usleep(20*1000);
     }
     else
     {

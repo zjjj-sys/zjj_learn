@@ -127,7 +127,6 @@ void SelectPoller::handleEvent()
             it->second->setREvent(rEvent);
             mEvents.push_back(it->second);
         }
-        //LOG_INFO("rEVent : %d\n",rEvent);
     }
 
     for(std::vector<IOEvent*>::iterator it = mEvents.begin(); it != mEvents.end(); ++it)

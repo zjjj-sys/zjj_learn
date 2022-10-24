@@ -7,8 +7,8 @@
 #include "UsageEnvironment.h"
 #include "Mutex.h"
 
-#define FRAME_MAX_SIZE (1024*1024)
-#define DEFAULT_FRAME_NUM 4
+#define FRAME_MAX_SIZE (512*1024) //512k
+#define DEFAULT_FRAME_NUM 3
 
 class AVFrame
 {

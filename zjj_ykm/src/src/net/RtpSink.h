@@ -49,6 +49,8 @@ protected:
     uint16_t mSeq;
     uint32_t mTimestamp;
     uint32_t mSSRC;
+    
+    //uint8_t mRtpChannel;
 
 private:
     TimerEvent* mTimerEvent;

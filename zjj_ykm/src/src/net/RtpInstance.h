@@ -40,6 +40,28 @@ public:
         return sendOverTcp(rtpPktPtr, rtpPacket->mSize + 4);
     }
 
+#if 0
+    int send(RtpPacket *rtpPacket)
+    {
+        if(rtpPacket->mRtpHeadr->payloadType != RTP_PAYLOAD_TYPE_H264)
+        {
+            //加上TCP传输的四个字节 
+            uint8_t *rtpPktPtr = rtpPacket->_mBuffer;
+            rtpPktPtr[0] = '$';
+            rtpPktPtr[1] = (uint8_t)mRtpChannel;
+            rtpPktPtr[2] = (uint8_t)(((rtpPacket->mSize) & 0xFF00) >> 8);
+            rtpPktPtr[3] = (uint8_t)((rtpPacket->mSize) & 0xFF);
+            return sendOverTcp(rtpPktPtr, rtpPacket->mSize + 4);
+        }
+        else
+        {
+            uint8_t *packfarme = rtpPacket->framebuf;
+            return sendOverTcp(packfarme,rtpPacket->mSize);
+        }
+    }
+
+#endif
+
     bool alive() const { return mIsAlive; }
     void setAlive(bool alive) { mIsAlive = alive; }
     void setSessionId(uint16_t sessionId) { mSessionId = sessionId; }

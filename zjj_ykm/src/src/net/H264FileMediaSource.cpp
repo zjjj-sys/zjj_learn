@@ -8,8 +8,8 @@
 #include "Logging.h"
  
 
-static inline int startCode3(uint8_t* buf);
-static inline int startCode4(uint8_t* buf);
+/* static inline int startCode3(uint8_t* buf);
+static inline int startCode4(uint8_t* buf); */
 
 H264FileMediaSource *H264FileMediaSource::createNew(UsageEnvironment *env, CShmBuf *VideoConsume)
 {
@@ -19,7 +19,7 @@ H264FileMediaSource *H264FileMediaSource::createNew(UsageEnvironment *env, CShmB
 H264FileMediaSource::H264FileMediaSource(UsageEnvironment *env, CShmBuf *VideoConsume) : MediaSource(env),mConsume(VideoConsume)
 {
 
-    setFps(25); //设置视频帧数 来算时间戳
+    //setFps(25); //设置视频帧数 来算时间戳
     tagframe = (FRAME *)malloc(sizeof(FRAME) + FRAME_MAX_SIZE);
     memset(tagframe, 0, sizeof(FRAME) + FRAME_MAX_SIZE);
     for (int i = 0; i < DEFAULT_FRAME_NUM; ++i)
@@ -53,10 +53,10 @@ void H264FileMediaSource::readFrame()
     }
     else if (retsize == 0)
     {
-        //usleep(5*1000);
         frame->mFrameSize = 0;
         mAVFrameInputQueue.pop();
         mAVFrameOutputQueue.push(frame);
+        usleep(10*1000);
     }
     else
     {
@@ -82,6 +82,7 @@ void H264FileMediaSource::readFrame()
     
 }
 
+#if 0
 static inline int startCode3(uint8_t* buf)
 {
     if(buf[0] == 0 && buf[1] == 0 && buf[2] == 1)
@@ -145,3 +146,4 @@ int H264FileMediaSource::getFrameFromH264File(int fd, uint8_t* frame, int size)
 
     return frameSize;
 }
+#endif

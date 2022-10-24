@@ -561,24 +561,6 @@ void RtspConnection::handleRtpOverTcp()
     
 }
 
-#if 0
-void RtspConnection::handleWriteBytes()
-{   
-    //LOG_INFO("trackId : %d\n",mTrackId);
-    
-    MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(mTrackId);
-    RtpSink::timeoutCallback(track->mRtpSink);
-
-    //通过检测返回值来确定是否有数据发送了 都没有数据发送就停10ms
-    /* if(mTrackId == track3)
-    {
-        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId0);
-        RtpSink::timeoutCallback(track->mRtpSink);
-        MediaSession::Track *track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId1);
-        RtpSink::timeoutCallback(track->mRtpSink);
-    } */
-}
-#endif 
 
 void RtspConnection::handleWriteBytes()
 {   
@@ -591,7 +573,7 @@ void RtspConnection::handleWriteBytes()
         VIRet = RtpSink::SendFramedCallback(track->mRtpSink);
         track = (MediaSession::Track*)mSession->getTrack(MediaSession::TrackId1);
         AIRet = RtpSink::SendFramedCallback(track->mRtpSink);
-        if(VIRet == 0 && AIRet == 0)
+        if(VIRet == 0 || AIRet == 0)
         {
             usleep(20*1000);
         }
@@ -602,7 +584,7 @@ void RtspConnection::handleWriteBytes()
         AIRet = RtpSink::SendFramedCallback(track->mRtpSink);
         if(AIRet == 0)
         {
-            usleep(5*1000);
+            usleep(20*1000);
         }
     }
 }

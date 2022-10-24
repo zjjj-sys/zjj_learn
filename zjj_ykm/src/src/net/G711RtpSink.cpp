@@ -6,7 +6,6 @@
 #include "G711RtpSink.h"
 #include "Logging.h"
  
-static uint32_t audio_timestamp = 0;
 
 
 G711RtpSink* G711RtpSink::createNew(UsageEnvironment* env, MediaSource* mediaSource)
@@ -74,25 +73,26 @@ void G711RtpSink::handleFrame(AVFrame* frame)
 
 int G711RtpSink::handleFrame(AVFrame* frame)
 {
+    uint32_t interval = 0;
     RtpHeader* rtpHeader = mRtpPacket.mRtpHeadr;
     int frameSize = frame->mFrameSize; 
     
     if(frameSize == 0)
     {
-        //usleep(5000);
         return 0;
     }
-    //rtpHeader->timestamp = htonl(frame->m_ftimestamp);
-    //mTimestamp = frame->m_ftimestamp;
-    //LOG_INFO("G711_Timestamp: %u\n",mTimestamp);
+    interval = 8*(frame->m_ftimestamp - pretimestamp);
+    pretimestamp = frame->m_ftimestamp;
+    
     memcpy(rtpHeader->payload, frame->mFrame, frameSize);
     mRtpPacket.mSize = frameSize ;
 
     sendRtpPacket(&mRtpPacket);
     
     mSeq++;
-    
-    mTimestamp += mSampleRate * (1000 / mFps) / 1000;
+
+    mTimestamp += interval;
+    //mTimestamp += mSampleRate * (1000 / mFps) / 1000;
     
     return frameSize;
     

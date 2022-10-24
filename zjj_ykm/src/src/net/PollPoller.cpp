@@ -96,7 +96,7 @@ bool PollPoller::removeIOEvent(IOEvent* event)
     int index = it->second;
     
     /* 如果不是在数组的最后 */
-    if(index != (mPollFdList.size() - 1))
+    if(index != (int)(mPollFdList.size() - 1))
     {
         /* 将要删除的元素和最后的元素交换 */
         iter_swap(mPollFdList.begin()+index, mPollFdList.end()-1); 

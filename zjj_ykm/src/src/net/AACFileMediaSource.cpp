@@ -104,7 +104,7 @@ int AACFileMeidaSource::getFrameFromAACFile(int fd, uint8_t* buf, int size)
         return -1;
     }
 
-    if(mAdtsHeader.aacFrameLength > size)
+    if((int)(mAdtsHeader.aacFrameLength) > size)
         return -1;
 
     memcpy(buf, tmpBuf, 7);

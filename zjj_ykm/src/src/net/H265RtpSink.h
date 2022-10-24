@@ -17,11 +17,14 @@ public:
     virtual int handleFrame(AVFrame* frame);
 
     void sendhandleFrame(AVFrame* frame);
-    
+
+    void packframe(RtpPacket* packet);
+
 private:
     RtpPacket mRtpPacket;
     int mClockRate;
     int mFps;
+    //int mwriteindex;
 
 };
 

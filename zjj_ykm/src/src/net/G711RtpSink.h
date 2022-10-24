@@ -25,6 +25,7 @@ private:
     uint32_t mSampleRate;   // 采样频率
     uint32_t mChannels;         // 通道数
     int mFps;
+    uint32_t pretimestamp;
 };
 
 #endif //_AAC_RTP_SINK_H_
